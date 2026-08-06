@@ -1,0 +1,90 @@
+{
+  "auditTimestamp": "2026-08-06T18:50:28.262Z",
+  "auditSummary": {
+    "totalMonitored": 8,
+    "portalsActive": 5,
+    "portalsFlagged": 3,
+    "status": "ATTENTION_NEEDED"
+  },
+  "results": [
+    {
+      "id": "CDC_USA",
+      "name": "US CDC Dog Import Rules",
+      "country": "USA 🇺🇸",
+      "url": "https://www.cdc.gov/importation/bringing-an-animal-into-the-united-states/dogs/index.html",
+      "status": "WARNING_HTTP_404",
+      "statusCode": 404,
+      "verifiedKeywordsCount": 0,
+      "lastChecked": "2026-08-06T18:50:13.860Z"
+    },
+    {
+      "id": "EU_PETS",
+      "name": "EU Food Safety Pet Movement",
+      "country": "EU 🇪🇺",
+      "url": "https://ec.europa.eu/food/animals/pet-movement_en",
+      "status": "ONLINE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 0,
+      "lastChecked": "2026-08-06T18:50:16.067Z"
+    },
+    {
+      "id": "UK_DEFRA",
+      "name": "UK GOV Pet Travel Rules",
+      "country": "UK 🇬🇧",
+      "url": "https://www.gov.uk/bring-pet-to-great-britain",
+      "status": "ONLINE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 3,
+      "lastChecked": "2026-08-06T18:50:16.119Z"
+    },
+    {
+      "id": "INDIA_AQCS",
+      "name": "India AQCS Animal Quarantine",
+      "country": "India 🇮🇳",
+      "url": "https://aqcsindia.gov.in",
+      "status": "ONLINE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 0,
+      "lastChecked": "2026-08-06T18:50:16.197Z"
+    },
+    {
+      "id": "SINGAPORE_AVS",
+      "name": "Singapore AVS NParks",
+      "country": "Singapore 🇸🇬",
+      "url": "https://www.nparks.gov.sg/avs/pets/bringing-animals-into-singapore-and-exporting",
+      "status": "WARNING_HTTP_404",
+      "statusCode": 404,
+      "verifiedKeywordsCount": 0,
+      "lastChecked": "2026-08-06T18:50:16.706Z"
+    },
+    {
+      "id": "JAPAN_MAFF",
+      "name": "Japan MAFF Animal Quarantine Service",
+      "country": "Japan 🇯🇵",
+      "url": "https://www.maff.go.jp/aqs/english/animal/dog/index.html",
+      "status": "ONLINE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 3,
+      "lastChecked": "2026-08-06T18:50:17.320Z"
+    },
+    {
+      "id": "AUSTRALIA_DAFF",
+      "name": "Australia DAFF Pet Import",
+      "country": "Australia 🇦🇺",
+      "url": "https://www.agriculture.gov.au/biosecurity-trade/cats-dogs",
+      "status": "FETCH_ERROR",
+      "errorDetails": "This operation was aborted",
+      "lastChecked": "2026-08-06T18:50:27.325Z"
+    },
+    {
+      "id": "NZ_MPI",
+      "name": "New Zealand MPI Biosecurity",
+      "country": "New Zealand 🇳🇿",
+      "url": "https://www.mpi.govt.nz/import/border-clearance/pets/",
+      "status": "ONLINE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 0,
+      "lastChecked": "2026-08-06T18:50:28.262Z"
+    }
+  ]
+}

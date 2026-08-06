@@ -1,0 +1,49 @@
+name: Weekly Regulations Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  audit-regulations:
+    name: Audit Biosecurity Regulations
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run audit script
+        run: npm run audit-regulations
+
+      - name: Check git status
+        id: git-check
+        run: |
+          if [ -n "$(git status --porcelain src/data/lastRegulationAudit.json)" ]; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.git-check.outputs.changes_detected == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update regulation audit records'
+          title: 'chore: update pet travel regulation audit'
+          body: |
+            Automated biosecurity regulation check.
+          branch: auto/regulation-audit-update
+          delete-branch: true

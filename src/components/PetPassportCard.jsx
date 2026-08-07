@@ -371,36 +371,48 @@ export default function PetPassportCard({ pet, onTabChange, onEditPet }) {
             </div>
 
             {/* QR Code Seal Box */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              background: 'rgba(6, 182, 212, 0.08)',
-              border: '1px dashed rgba(6, 182, 212, 0.4)',
-              padding: 16,
-              borderRadius: 16
-            }}>
-              <div style={{
-                width: 60,
-                height: 60,
-                background: '#fff',
-                borderRadius: 8,
-                padding: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <QrCode size={48} color="#0F172A" />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-brand-accent)' }}>
-                  Digital Verification Seal
+            {(() => {
+              const verificationUrl = `${window.location.origin}${window.location.pathname}#pet=${pet.id}&tab=passport`;
+              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verificationUrl)}`;
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  background: 'rgba(6, 182, 212, 0.08)',
+                  border: '1px dashed rgba(6, 182, 212, 0.4)',
+                  padding: 14,
+                  borderRadius: 16
+                }}>
+                  <div style={{
+                    width: 68,
+                    height: 68,
+                    background: '#fff',
+                    borderRadius: 10,
+                    padding: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <img
+                      src={qrImageUrl}
+                      alt={`Scannable QR Verification Code for ${pet.name}`}
+                      style={{ width: '100%', height: '100%', borderRadius: 6 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-brand-accent)' }}>
+                      Scannable Digital Verification
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      Scan QR with mobile camera to view active health passport & microchip verification.
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Scan code at customs / border inspection for instant record validation.
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             <button 
               onClick={() => onTabChange('checklist')}

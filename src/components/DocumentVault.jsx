@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Upload, Plus, Trash2, CheckCircle2, Phone, Mail, User, ShieldCheck, FileCheck } from 'lucide-react';
+import { dbStore } from '../services/dbStore';
 
 export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) {
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -11,8 +12,6 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  if (!pet) return null;
-
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && showUploadModal) {
@@ -22,6 +21,8 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showUploadModal]);
+
+  if (!pet) return null;
 
   const processFile = (file) => {
     if (!file) return;
@@ -36,13 +37,6 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
       setDocName(nameWithoutExt);
     }
-
-    // Convert file to Data URL for stored local preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setFileDataUrl(e.target.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleFileSelect = (e) => {
@@ -67,24 +61,33 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
     if (file) processFile(file);
   };
 
-  const handleUploadSubmit = (e) => {
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!docName) return;
 
+    const docId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'doc-' + Date.now();
+
+    // Persist heavy binary file blob to IndexedDB to avoid localStorage quota crash
+    if (selectedFile) {
+      try {
+        await dbStore.saveDocumentBlob(docId, selectedFile);
+      } catch (err) {
+        console.warn('Failed to save document blob to IndexedDB:', err);
+      }
+    }
+
     onAddDocument(pet.id, {
-      id: (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'doc-' + Date.now()),
+      id: docId,
       name: docName,
       type: docType,
       dateAdded: new Date().toISOString().split('T')[0],
       status: 'Stored',
-      fileSize: fileSizeFormatted !== '0 KB' ? fileSizeFormatted : '1.2 MB',
-      fileUrl: fileDataUrl || null
+      fileSize: fileSizeFormatted !== '0 KB' ? fileSizeFormatted : '1.2 MB'
     });
 
     setShowUploadModal(false);
     setDocName('');
     setSelectedFile(null);
-    setFileDataUrl(null);
     setFileSizeFormatted('0 KB');
   };
 

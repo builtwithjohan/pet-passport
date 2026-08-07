@@ -9,12 +9,13 @@ function getInitialsAvatar(name) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-async function hashPassword(password, salt = 'pet_passport_salt_v1') {
+async function hashPassword(password, saltHex) {
   if (!window.crypto?.subtle) {
-    // Fallback if SubtleCrypto is unavailable in non-secure contexts
-    return 'h_' + password.split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0);
+    throw new Error('Web Crypto API (SubtleCrypto) is required for secure authentication.');
   }
   const enc = new TextEncoder();
+  const salt = saltHex ? new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16))) : enc.encode('pet_passport_default_salt');
+  
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     enc.encode(password),
@@ -25,7 +26,7 @@ async function hashPassword(password, salt = 'pet_passport_salt_v1') {
   const key = await crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: enc.encode(salt),
+      salt: salt,
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -36,6 +37,12 @@ async function hashPassword(password, salt = 'pet_passport_salt_v1') {
   );
   const exported = await crypto.subtle.exportKey('raw', key);
   return Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateRandomSaltHex() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function generateSecureToken() {
@@ -109,18 +116,21 @@ export const authService = {
     }
 
     const existingUser = await dbStore.getUserByEmail(email);
-    const passwordHash = await hashPassword(password);
 
     if (isSignUp) {
       if (existingUser) {
         throw new Error('An account already exists with this email. Please sign in instead.');
       }
 
+      const saltHex = generateRandomSaltHex();
+      const passwordHash = await hashPassword(password, saltHex);
       const userName = email.split('@')[0];
+
       const newUser = {
         id: 'usr_' + generateSecureToken(),
         email,
         passwordHash,
+        salt: saltHex,
         name: userName,
         avatarUrl: getInitialsAvatar(userName),
         createdAt: new Date().toISOString()
@@ -137,6 +147,9 @@ export const authService = {
       if (!existingUser) {
         throw new Error('No account found with this email. Please sign up first.');
       }
+
+      const userSalt = existingUser.salt || 'pet_passport_default_salt';
+      const passwordHash = await hashPassword(password, userSalt);
 
       if (existingUser.passwordHash && existingUser.passwordHash !== passwordHash) {
         throw new Error('Invalid email or password. Please try again.');

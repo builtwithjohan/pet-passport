@@ -261,12 +261,17 @@ export default function CountryRulesWizard({ pet }) {
             {destination.quarantine}
           </p>
           
+          <div style={{ marginTop: 12, fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Verified: <strong>{destination.lastVerified || '2026-08'}</strong></span>
+            <span>Always verify with official sources</span>
+          </div>
+
           <a
             href={destination.officialPortal}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-secondary"
-            style={{ fontSize: '0.78rem', padding: '6px 12px', width: '100%', justifyContent: 'center' }}
+            style={{ fontSize: '0.78rem', padding: '8px 12px', width: '100%', justifyContent: 'center', marginTop: 8 }}
           >
             Official Government Portal <ExternalLink size={14} />
           </a>

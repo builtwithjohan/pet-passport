@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X, Dog, Cat } from 'lucide-react';
 
 export default function AddPetModal({ onClose, onAddPet }) {
@@ -13,6 +13,14 @@ export default function AddPetModal({ onClose, onAddPet }) {
   const [originCountry, setOriginCountry] = useState('USA');
   const [destinationCountry, setDestinationCountry] = useState('EU');
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name || !breed || !microchipId) return;
@@ -21,8 +29,11 @@ export default function AddPetModal({ onClose, onAddPet }) {
       ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80'
       : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80';
 
+    const petId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'pet-' + Date.now();
+    const vacId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'v-' + Date.now();
+
     onAddPet({
-      id: 'pet-' + Date.now(),
+      id: petId,
       name,
       species,
       breed,
@@ -44,13 +55,13 @@ export default function AddPetModal({ onClose, onAddPet }) {
       },
       vaccinations: [
         {
-          id: 'v-' + Date.now(),
+          id: vacId,
           name: 'Rabies Primary Vaccine (15-Digit ISO Microchip Verified)',
           dateAdministered: new Date().toISOString().split('T')[0],
           dateExpires: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
           batch: 'RB-NEW-01',
           vet: 'Dr. Sarah Jenkins',
-          status: 'valid'
+          type: 'rabies'
         }
       ],
       documents: [],
@@ -61,13 +72,13 @@ export default function AddPetModal({ onClose, onAddPet }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="add-pet-modal-title">
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', margin: 0 }}>
+          <h3 id="add-pet-modal-title" style={{ fontSize: '1.3rem', color: 'var(--text-primary)', margin: 0 }}>
             Add New Pet Passport Profile
           </h3>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <button onClick={onClose} aria-label="Close modal" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>

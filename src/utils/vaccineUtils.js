@@ -1,3 +1,5 @@
+import { COUNTRIES, RABIES_HIGH_RISK_COUNTRIES } from '../data/countriesData';
+
 /**
  * Utility functions for computing vaccination status and compliance dynamically from dates.
  */
@@ -39,27 +41,50 @@ export function isRabiesValid(pet) {
 export function computeDestinationReadinessScore(pet, destinationCountryCode = 'EU') {
   if (!pet) return 0;
 
-  let totalPoints = 0;
-  let maxPoints = 100;
+  const targetCountry = COUNTRIES.find(c => c.code === destinationCountryCode || c.id === destinationCountryCode) || COUNTRIES[0];
+  const isFromHighRisk = RABIES_HIGH_RISK_COUNTRIES.includes(pet.originCountry);
 
-  // 1. Microchip presence & date (25 points)
-  if (pet.microchipId && pet.microchipId.length >= 10) {
-    totalPoints += 25;
+  let earned = 0;
+  let totalWeight = 0;
+
+  // 1. Microchip Requirement (Weight: 25)
+  totalWeight += 25;
+  if (targetCountry.microchip.required) {
+    if (pet.microchipId && pet.microchipId.length >= 10) {
+      earned += 25;
+    }
+  } else {
+    earned += 25;
   }
 
-  // 2. Valid Rabies Vaccination (35 points)
-  if (isRabiesValid(pet)) {
-    totalPoints += 35;
+  // 2. Rabies Vaccine Requirement (Weight: 35)
+  totalWeight += 35;
+  if (targetCountry.rabies.required) {
+    if (isRabiesValid(pet)) {
+      earned += 35;
+    }
+  } else {
+    earned += 35;
   }
 
-  // 3. Completed checklist items (25 points)
-  const completedCount = pet.completedChecklistIds?.length || 0;
-  totalPoints += Math.min(25, completedCount * 5);
+  // 3. Titre Test Requirement (Weight: 20)
+  const needsTitre = (isFromHighRisk && targetCountry.titreTest?.requiredForHighRisk) || targetCountry.titreTest?.requiredForLowRisk;
+  totalWeight += 20;
+  if (needsTitre) {
+    const hasTitre = pet.vaccinations?.some(v => {
+      const isTitre = (v.name || '').toLowerCase().includes('titre') || (v.name || '').toLowerCase().includes('favn') || v.type === 'titre';
+      return isTitre && getVaccineStatus(v).status !== 'expired';
+    });
+    if (hasTitre) earned += 20;
+  } else {
+    earned += 20;
+  }
 
-  // 4. Stored Documents (15 points)
+  // 4. Documents Vault (Weight: 20)
+  totalWeight += 20;
   if (pet.documents && pet.documents.length > 0) {
-    totalPoints += Math.min(15, pet.documents.length * 5);
+    earned += Math.min(20, pet.documents.length * 10);
   }
 
-  return Math.min(100, Math.round(totalPoints));
+  return Math.min(100, Math.round((earned / totalWeight) * 100));
 }

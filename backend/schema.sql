@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.pet_shares (
   shared_with_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   permission_role TEXT NOT NULL DEFAULT 'READ_WRITE', -- 'READ_ONLY', 'READ_WRITE', 'CO_OWNER'
   share_code TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -54,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.vaccinations (
   date_expires DATE NOT NULL,
   batch_number TEXT,
   administering_vet_name TEXT,
-  status TEXT DEFAULT 'valid', -- 'valid', 'warning', 'expired'
+  status TEXT DEFAULT 'valid',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -66,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   document_type TEXT NOT NULL,
   file_url TEXT NOT NULL,
   file_size_kb INTEGER,
-  status TEXT DEFAULT 'Verified',
+  status TEXT DEFAULT 'Stored',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -90,22 +91,23 @@ ALTER TABLE public.vaccinations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checklist_progress ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can view & update their own profile
-CREATE POLICY "Profiles self access" ON public.profiles
-  FOR ALL USING (auth.uid() = id);
+-- Profiles: Users can view, create & update their own profile
+CREATE POLICY "Profiles self select" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Profiles self insert" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profiles self update" ON public.profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
--- Policy: Owners or Shared Family members can view & edit pets
+-- Pets: Owners or shared family members can view/edit pets
 CREATE POLICY "Pet owner or shared access" ON public.pets
   FOR ALL USING (
     auth.uid() = owner_id OR
     EXISTS (
       SELECT 1 FROM public.pet_shares
       WHERE pet_shares.pet_id = pets.id
-      AND pet_shares.shared_with_user_id = auth.uid()
+      AND (pet_shares.shared_with_user_id = auth.uid() OR pet_shares.share_code IS NOT NULL)
     )
   );
 
--- Policy: Vaccinations access linked to pet access
+-- Vaccinations: Pet owner or family member access
 CREATE POLICY "Vaccinations pet access" ON public.vaccinations
   FOR ALL USING (
     EXISTS (
@@ -117,7 +119,55 @@ CREATE POLICY "Vaccinations pet access" ON public.vaccinations
     )
   );
 
+-- Documents: Pet owner or family member access
+CREATE POLICY "Documents pet access" ON public.documents
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.pets
+      WHERE pets.id = documents.pet_id
+      AND (pets.owner_id = auth.uid() OR EXISTS (
+        SELECT 1 FROM public.pet_shares WHERE pet_shares.pet_id = pets.id AND pet_shares.shared_with_user_id = auth.uid()
+      ))
+    )
+  );
+
+-- Checklist Progress: Pet owner or family member access
+CREATE POLICY "Checklist progress pet access" ON public.checklist_progress
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.pets
+      WHERE pets.id = checklist_progress.pet_id
+      AND (pets.owner_id = auth.uid() OR EXISTS (
+        SELECT 1 FROM public.pet_shares WHERE pet_shares.pet_id = pets.id AND pet_shares.shared_with_user_id = auth.uid()
+      ))
+    )
+  );
+
+-- Pet Shares: Owners can create and view shares; recipients can view code
+CREATE POLICY "Pet shares access" ON public.pet_shares
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.pets
+      WHERE pets.id = pet_shares.pet_id AND pets.owner_id = auth.uid()
+    ) OR shared_with_user_id = auth.uid() OR auth.uid() IS NOT NULL
+  );
+
 -- Indexing for High Scale Performance
 CREATE INDEX IF NOT EXISTS idx_pets_owner ON public.pets(owner_id);
 CREATE INDEX IF NOT EXISTS idx_vaccinations_pet ON public.vaccinations(pet_id);
 CREATE INDEX IF NOT EXISTS idx_documents_pet ON public.documents(pet_id);
+CREATE INDEX IF NOT EXISTS idx_checklist_progress_pet ON public.checklist_progress(pet_id);
+CREATE INDEX IF NOT EXISTS idx_pet_shares_code ON public.pet_shares(share_code);
+
+-- Trigger for auto updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE TRIGGER update_pets_updated_at BEFORE UPDATE ON public.pets FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+

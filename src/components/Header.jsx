@@ -132,7 +132,7 @@ export default function Header({
           </div>
         )}
 
-        {/* View Mode (Web / Mobile App Switcher), User Account & Theme Toggle */}
+        {/* User Account & Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* User Account Bar & Pet Share */}
           <UserAccountBar
@@ -141,54 +141,6 @@ export default function Header({
             onLogout={onLogout}
             activePet={activePet}
           />
-
-          {/* View Mode Toggle */}
-          <div style={{
-            display: 'flex',
-            background: 'var(--bg-surface-elevated)',
-            padding: 3,
-            borderRadius: 12,
-            border: '1px solid var(--border-color)'
-          }}>
-            <button
-              onClick={() => setViewMode('desktop')}
-              style={{
-                background: viewMode === 'desktop' ? 'var(--color-brand-primary)' : 'transparent',
-                color: viewMode === 'desktop' ? '#fff' : 'var(--text-secondary)',
-                border: 'none',
-                padding: '6px 10px',
-                borderRadius: 8,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                transition: 'all 0.2s'
-              }}
-            >
-              <Monitor size={14} /> Desktop
-            </button>
-            <button
-              onClick={() => setViewMode('mobile')}
-              style={{
-                background: viewMode === 'mobile' ? 'var(--color-brand-primary)' : 'transparent',
-                color: viewMode === 'mobile' ? '#fff' : 'var(--text-secondary)',
-                border: 'none',
-                padding: '6px 10px',
-                borderRadius: 8,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                transition: 'all 0.2s'
-              }}
-            >
-              <Smartphone size={14} /> App Preview
-            </button>
-          </div>
 
           {/* Theme Toggle Button */}
           <button

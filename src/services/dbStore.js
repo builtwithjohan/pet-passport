@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'pet_passport_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export async function initDB() {
   return openDB(DB_NAME, DB_VERSION, {
@@ -24,6 +24,10 @@ export async function initDB() {
         const shareStore = db.createObjectStore('pet_shares', { keyPath: 'id' });
         shareStore.createIndex('shareCode', 'shareCode', { unique: true });
         shareStore.createIndex('petId', 'petId', { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains('document_blobs')) {
+        db.createObjectStore('document_blobs', { keyPath: 'id' });
       }
     }
   });
@@ -62,6 +66,7 @@ export const dbStore = {
 
   async getSession(token) {
     const db = await initDB();
+    await this.pruneExpiredSessions();
     const session = await db.get('sessions', token);
     if (!session) return null;
     if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
@@ -74,6 +79,21 @@ export const dbStore = {
   async deleteSession(token) {
     const db = await initDB();
     await db.delete('sessions', token);
+  },
+
+  async pruneExpiredSessions() {
+    try {
+      const db = await initDB();
+      const sessions = await db.getAll('sessions');
+      const now = new Date();
+      for (const s of sessions) {
+        if (s.expiresAt && new Date(s.expiresAt) < now) {
+          await db.delete('sessions', s.token);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to prune expired sessions:', err);
+    }
   },
 
   // Pets
@@ -114,5 +134,22 @@ export const dbStore = {
     const tx = db.transaction('pet_shares', 'readonly');
     const index = tx.store.index('shareCode');
     return index.get(shareCode);
+  },
+
+  // Document Blobs (Heavy Binary Persistence)
+  async saveDocumentBlob(docId, blob) {
+    const db = await initDB();
+    await db.put('document_blobs', { id: docId, blob, createdAt: new Date().toISOString() });
+  },
+
+  async getDocumentBlob(docId) {
+    const db = await initDB();
+    const rec = await db.get('document_blobs', docId);
+    return rec?.blob || null;
+  },
+
+  async deleteDocumentBlob(docId) {
+    const db = await initDB();
+    await db.delete('document_blobs', docId);
   }
 };

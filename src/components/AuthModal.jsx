@@ -208,66 +208,8 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
             </button>
           </form>
         ) : (
-          /* OAuth & Email Password Form */
+          /* Email / Password Form (Primary) & OAuth Options */
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              <button
-                type="button"
-                onClick={() => handleProviderLogin('apple')}
-                disabled={loading}
-                style={{
-                  background: '#000',
-                  color: '#fff',
-                  border: '1px solid #333',
-                  padding: '10px 16px',
-                  borderRadius: 12,
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8
-                }}
-              >
-                <span></span> Sign in with Apple
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleProviderLogin('google')}
-                disabled={loading}
-                style={{
-                  background: '#fff',
-                  color: '#1f2937',
-                  border: '1px solid #e5e7eb',
-                  padding: '10px 16px',
-                  borderRadius: 12,
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8
-                }}
-              >
-                <span>🌐</span> Sign in with Google
-              </button>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              margin: '16px 0',
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)'
-            }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
-              <span style={{ padding: '0 10px' }}>OR WITH EMAIL</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
-            </div>
-
             <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label htmlFor="auth-email-input" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
@@ -317,6 +259,64 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
                 {loading ? 'Authenticating...' : activeMode === 'signup' ? 'Create Account & Save Pets' : 'Sign In & Load Pets'}
               </button>
             </form>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '20px 0 16px 0',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)'
+            }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+              <span style={{ padding: '0 10px' }}>OR SIGN IN WITH PROVIDER</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => handleProviderLogin('apple')}
+                disabled={loading}
+                style={{
+                  background: '#000',
+                  color: '#fff',
+                  border: '1px solid #333',
+                  padding: '10px 16px',
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                <span></span> Sign in with Apple
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleProviderLogin('google')}
+                disabled={loading}
+                style={{
+                  background: '#fff',
+                  color: '#1f2937',
+                  border: '1px solid #e5e7eb',
+                  padding: '10px 16px',
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                <span>🌐</span> Sign in with Google
+              </button>
+            </div>
           </div>
         )}
       </div>

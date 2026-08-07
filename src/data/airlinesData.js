@@ -17,6 +17,7 @@ export const AIRLINES = [
     temperatureRestrictions: 'Pets not accepted as checked baggage or cargo if forecast ground temperature is below 45°F (7°C) or above 85°F (29°C) at any point on the itinerary.',
     snubNosedPolicy: 'Strict ban on snub-nosed / brachycephalic dogs and cats in cargo (Pugs, Bulldogs, Boxers, Persian cats, etc.) due to respiratory distress risk.',
     bookingNoticeWindow: 'Reserve space at least 48 hours prior to departure. First-come, first-served (max 4 pets per flight in Main Cabin, 2 in First/Business).',
+    lastVerified: '2026-08',
     websiteUrl: 'https://www.delta.com/us/en/pet-travel/overview'
   },
   {

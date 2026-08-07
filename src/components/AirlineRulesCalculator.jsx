@@ -105,6 +105,19 @@ export default function AirlineRulesCalculator({ pet }) {
             </div>
           </div>
 
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <span>Verified: <strong>{selectedAirline.lastVerified || '2026-08'}</strong></span>
+            <span>•</span>
+            <a 
+              href={selectedAirline.websiteUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ color: 'var(--color-brand-accent)', textDecoration: 'none' }}
+            >
+              Official Carrier Policy Portal ↗
+            </a>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Cabin Status Pill */}
             <div style={{

@@ -100,6 +100,11 @@ export function usePets() {
     addToast(`Added ${newPet.name}'s passport profile`, 'success');
   }, [addToast]);
 
+  const updatePet = useCallback((updatedPet) => {
+    setPets(prev => prev.map(p => p.id === updatedPet.id ? updatedPet : p));
+    addToast(`Updated ${updatedPet.name}'s passport profile & photo`, 'success');
+  }, [addToast]);
+
   const importSharedPet = useCallback((sharedPet) => {
     setPets(prev => [sharedPet, ...prev]);
     setActivePetId(sharedPet.id);
@@ -147,6 +152,7 @@ export function usePets() {
     dismissToast,
     handleAuthSuccess,
     addPet,
+    updatePet,
     importSharedPet,
     addVaccine,
     deleteVaccine,

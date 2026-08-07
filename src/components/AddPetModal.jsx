@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Dog, Cat } from 'lucide-react';
+import { Plus, X, Dog, Cat, Camera } from 'lucide-react';
+import { dbStore } from '../services/dbStore';
 
 export default function AddPetModal({ onClose, onAddPet }) {
   const [name, setName] = useState('');
@@ -13,6 +14,10 @@ export default function AddPetModal({ onClose, onAddPet }) {
   const [originCountry, setOriginCountry] = useState('USA');
   const [destinationCountry, setDestinationCountry] = useState('EU');
 
+  // Photo state
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -21,7 +26,19 @@ export default function AddPetModal({ onClose, onAddPet }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = (e) => {
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhotoPreview(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !breed || !microchipId) return;
 
@@ -31,6 +48,14 @@ export default function AddPetModal({ onClose, onAddPet }) {
 
     const petId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'pet-' + Date.now();
     const vacId = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'v-' + Date.now();
+
+    if (selectedPhotoFile) {
+      try {
+        await dbStore.savePetPhotoBlob(petId, selectedPhotoFile);
+      } catch (err) {
+        console.warn('Failed to save pet photo blob:', err);
+      }
+    }
 
     onAddPet({
       id: petId,
@@ -45,7 +70,7 @@ export default function AddPetModal({ onClose, onAddPet }) {
       color,
       originCountry,
       destinationCountry,
-      photoUrl: defaultPhoto,
+      photoUrl: photoPreview || defaultPhoto,
       passportNumber: `PET-${originCountry.substring(0,2)}-${Math.floor(1000 + Math.random() * 9000)}-${name.substring(0,2).toUpperCase()}`,
       veterinarian: {
         name: 'Dr. Sarah Jenkins, DVM',
@@ -84,6 +109,53 @@ export default function AddPetModal({ onClose, onAddPet }) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Photo Uploader */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            background: 'var(--bg-surface-elevated)',
+            padding: 12,
+            borderRadius: 12,
+            border: '1px solid var(--border-color)'
+          }}>
+            {photoPreview ? (
+              <img
+                src={photoPreview}
+                alt="Pet Preview"
+                style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'cover', border: '2px solid var(--color-brand-primary)' }}
+              />
+            ) : (
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                background: 'rgba(99, 102, 241, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-brand-primary)'
+              }}>
+                <Camera size={24} />
+              </div>
+            )}
+
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 2 }}>
+                Pet Passport Photo (Optional)
+              </label>
+              <label className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Camera size={12} /> Upload Custom Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoSelect}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>

@@ -1,10 +1,30 @@
-import React, { useRef } from 'react';
-import { ShieldCheck, Download, Copy, Check, QrCode, AlertTriangle, Syringe, Heart, Calendar, Award } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { ShieldCheck, Download, Copy, Check, QrCode, AlertTriangle, Syringe, Heart, Calendar, Award, Edit } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { getVaccineStatus } from '../utils/vaccineUtils';
+import { dbStore } from '../services/dbStore';
 
-export default function PetPassportCard({ pet, onTabChange }) {
-  const [copied, setCopied] = React.useState(false);
+export default function PetPassportCard({ pet, onTabChange, onEditPet }) {
+  const [copied, setCopied] = useState(false);
+  const [customPhotoUrl, setCustomPhotoUrl] = useState(null);
+
+  useEffect(() => {
+    async function loadPhotoBlob() {
+      if (!pet?.id) return;
+      try {
+        const blob = await dbStore.getPetPhotoBlob(pet.id);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setCustomPhotoUrl(url);
+        } else {
+          setCustomPhotoUrl(null);
+        }
+      } catch (err) {
+        console.warn('Failed to load pet photo blob from IndexedDB:', err);
+      }
+    }
+    loadPhotoBlob();
+  }, [pet?.id]);
 
   if (!pet) return null;
 
@@ -130,9 +150,16 @@ export default function PetPassportCard({ pet, onTabChange }) {
           </p>
         </div>
 
-        <button onClick={handleExportPDF} className="btn-primary">
-          <Download size={18} /> Download Printable PDF Passport
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {onEditPet && (
+            <button onClick={() => onEditPet(pet)} className="btn-secondary">
+              <Edit size={16} /> Edit Profile & Photo
+            </button>
+          )}
+          <button onClick={handleExportPDF} className="btn-primary">
+            <Download size={18} /> Download Printable PDF Passport
+          </button>
+        </div>
       </div>
 
       {/* Main Passport Card */}
@@ -181,7 +208,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
               boxShadow: 'var(--shadow-lg)'
             }}>
               <img 
-                src={pet.photoUrl} 
+                src={customPhotoUrl || pet.photoUrl} 
                 alt={pet.name} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />

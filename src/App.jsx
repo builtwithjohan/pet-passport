@@ -8,6 +8,7 @@ import TravelChecklist from './components/TravelChecklist';
 import DocumentVault from './components/DocumentVault';
 import AnxietyReliefHub from './components/AnxietyReliefHub';
 import AddPetModal from './components/AddPetModal';
+import EditPetModal from './components/EditPetModal';
 import AuthModal from './components/AuthModal';
 import ToastContainer from './components/ToastContainer';
 import { usePets } from './hooks/usePets';
@@ -24,6 +25,7 @@ export default function App() {
     dismissToast,
     handleAuthSuccess,
     addPet,
+    updatePet,
     importSharedPet,
     addVaccine,
     deleteVaccine,
@@ -37,6 +39,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('passport');
   const [theme, setTheme] = useState('dark');
   const [showAddPetModal, setShowAddPetModal] = useState(false);
+  const [editingPet, setEditingPet] = useState(null);
 
   // Restore URL hash params on mount & listener
   useEffect(() => {
@@ -76,7 +79,7 @@ export default function App() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'passport':
-        return <PetPassportCard pet={activePet} onTabChange={setActiveTab} />;
+        return <PetPassportCard pet={activePet} onTabChange={setActiveTab} onEditPet={setEditingPet} />;
       case 'vaccines':
         return (
           <VaccineTracker 
@@ -107,7 +110,7 @@ export default function App() {
       case 'anxiety':
         return <AnxietyReliefHub />;
       default:
-        return <PetPassportCard pet={activePet} onTabChange={setActiveTab} />;
+        return <PetPassportCard pet={activePet} onTabChange={setActiveTab} onEditPet={setEditingPet} />;
     }
   };
 
@@ -160,6 +163,15 @@ export default function App() {
         <AddPetModal
           onClose={() => setShowAddPetModal(false)}
           onAddPet={addPet}
+        />
+      )}
+
+      {/* Edit Pet Modal */}
+      {editingPet && (
+        <EditPetModal
+          pet={editingPet}
+          onClose={() => setEditingPet(null)}
+          onUpdatePet={updatePet}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'pet_passport_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export async function initDB() {
   return openDB(DB_NAME, DB_VERSION, {
@@ -28,6 +28,10 @@ export async function initDB() {
 
       if (!db.objectStoreNames.contains('document_blobs')) {
         db.createObjectStore('document_blobs', { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains('pet_photos')) {
+        db.createObjectStore('pet_photos', { keyPath: 'id' });
       }
     }
   });
@@ -151,5 +155,22 @@ export const dbStore = {
   async deleteDocumentBlob(docId) {
     const db = await initDB();
     await db.delete('document_blobs', docId);
+  },
+
+  // Pet Profile Photos (Heavy Image Persistence)
+  async savePetPhotoBlob(petId, blob) {
+    const db = await initDB();
+    await db.put('pet_photos', { id: petId, blob, createdAt: new Date().toISOString() });
+  },
+
+  async getPetPhotoBlob(petId) {
+    const db = await initDB();
+    const rec = await db.get('pet_photos', petId);
+    return rec?.blob || null;
+  },
+
+  async deletePetPhotoBlob(petId) {
+    const db = await initDB();
+    await db.delete('pet_photos', petId);
   }
 };

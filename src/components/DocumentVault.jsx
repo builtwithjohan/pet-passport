@@ -1,35 +1,98 @@
-import React, { useState } from 'react';
-import { FileText, Upload, Plus, Trash2, CheckCircle2, Phone, Mail, User, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { FileText, Upload, Plus, Trash2, CheckCircle2, Phone, Mail, User, ShieldCheck, FileCheck } from 'lucide-react';
 
 export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [docName, setDocName] = useState('');
   const [docType, setDocType] = useState('USDA Health Cert');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileSizeFormatted, setFileSizeFormatted] = useState('0 KB');
+  const [fileDataUrl, setFileDataUrl] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   if (!pet) return null;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showUploadModal) {
+        setShowUploadModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showUploadModal]);
+
+  const processFile = (file) => {
+    if (!file) return;
+
+    // Calculate file size
+    const sizeKB = file.size / 1024;
+    const formatted = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${Math.round(sizeKB)} KB`;
+    setFileSizeFormatted(formatted);
+    setSelectedFile(file);
+
+    if (!docName) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+      setDocName(nameWithoutExt);
+    }
+
+    // Convert file to Data URL for stored local preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFileDataUrl(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
 
   const handleUploadSubmit = (e) => {
     e.preventDefault();
     if (!docName) return;
 
     onAddDocument(pet.id, {
-      id: 'doc-' + Date.now(),
+      id: (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'doc-' + Date.now()),
       name: docName,
       type: docType,
       dateAdded: new Date().toISOString().split('T')[0],
-      status: 'Verified',
-      fileSize: '1.4 MB'
+      status: 'Stored',
+      fileSize: fileSizeFormatted !== '0 KB' ? fileSizeFormatted : '1.2 MB',
+      fileUrl: fileDataUrl || null
     });
 
     setShowUploadModal(false);
     setDocName('');
+    setSelectedFile(null);
+    setFileDataUrl(null);
+    setFileSizeFormatted('0 KB');
   };
 
   return (
     <div style={{ padding: '24px 0' }}>
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
         flexWrap: 'wrap',
@@ -59,73 +122,84 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
             background: 'var(--color-brand-gradient)',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             color: '#fff'
           }}>
             <User size={24} />
           </div>
           <div style={{ flex: 1 }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-              Licensed Veterinarian of Record
+              Attending Veterinarian of Record
             </span>
             <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
-              {pet.veterinarian?.name || 'Dr. Sarah Jenkins, DVM'}
+              {pet.veterinarian?.name || 'Veterinarian Not Assigned'}
             </h3>
             <p style={{ margin: '2px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
               {pet.veterinarian?.clinic} • License #{pet.veterinarian?.license}
             </p>
           </div>
           
-          <a 
-            href={`tel:${pet.veterinarian?.phone}`} 
-            className="btn-secondary"
-            style={{ padding: '8px 14px', fontSize: '0.82rem' }}
-          >
-            <Phone size={16} /> Call Vet
-          </a>
+          {pet.veterinarian?.phone && (
+            <a 
+              href={`tel:${pet.veterinarian.phone}`} 
+              className="btn-secondary"
+              style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+            >
+              <Phone size={16} /> Call Vet
+            </a>
+          )}
         </div>
       </div>
 
       {/* Documents Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-        {pet.documents.map((doc) => (
-          <div key={doc.id} className="glass-panel" style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <FileText size={28} color="var(--color-brand-accent)" />
-                <div>
-                  <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>{doc.name}</h4>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{doc.type} • {doc.fileSize}</span>
+      {pet.documents.length === 0 ? (
+        <div className="glass-panel" style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <FileText size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+          <p style={{ margin: 0, fontWeight: 600 }}>No travel documents stored yet.</p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>Click "Upload Document" to attach health certificates, microchip forms, or lab reports.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+          {pet.documents.map((doc) => (
+            <div key={doc.id} className="glass-panel" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FileText size={28} color="var(--color-brand-accent)" />
+                  <div>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>{doc.name}</h4>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{doc.type} • {doc.fileSize || 'Stored'}</span>
+                  </div>
                 </div>
+                <span className="badge badge-valid">{doc.status || 'Stored'}</span>
               </div>
-              <span className="badge badge-valid">{doc.status}</span>
-            </div>
 
-            <div style={{
-              marginTop: 16,
-              paddingTop: 12,
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              justify: 'space-between',
-              alignItems: 'center',
-              fontSize: '0.78rem',
-              color: 'var(--text-muted)'
-            }}>
-              <span>Added: {doc.dateAdded}</span>
-              <button
-                onClick={() => onDeleteDocument(pet.id, doc.id)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--color-rose)', cursor: 'pointer' }}
-              >
-                <Trash2 size={16} />
-              </button>
+              <div style={{
+                marginTop: 16,
+                paddingTop: 12,
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.78rem',
+                color: 'var(--text-muted)'
+              }}>
+                <span>Added: {doc.dateAdded}</span>
+                <button
+                  onClick={() => onDeleteDocument(pet.id, doc.id)}
+                  aria-label={`Delete ${doc.name}`}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--color-rose)', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="modal-overlay" onClick={() => setShowUploadModal(false)}>
+        <div className="modal-overlay" onClick={() => setShowUploadModal(false)} role="dialog" aria-modal="true">
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '1.2rem', marginBottom: 16, color: 'var(--text-primary)' }}>
               Upload Pet Travel Document
@@ -133,12 +207,13 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
 
             <form onSubmit={handleUploadSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                <label htmlFor="doc-title-input" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                   Document Title
                 </label>
                 <input
+                  id="doc-title-input"
                   type="text"
-                  placeholder="e.g. USDA Health Certificate, Rabies Tag Record"
+                  placeholder="e.g. USDA Health Certificate Annex IV"
                   value={docName}
                   onChange={e => setDocName(e.target.value)}
                   required
@@ -154,10 +229,11 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
               </div>
 
               <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                <label htmlFor="doc-type-select" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                   Document Type
                 </label>
                 <select
+                  id="doc-type-select"
                   value={docType}
                   onChange={e => setDocType(e.target.value)}
                   style={{
@@ -177,21 +253,50 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
                 </select>
               </div>
 
-              <div style={{
-                border: '2px dashed var(--border-color-glow)',
-                borderRadius: 14,
-                padding: 24,
-                textAlign: 'center',
-                background: 'rgba(99, 102, 241, 0.05)',
-                cursor: 'pointer'
-              }}>
-                <Upload size={32} color="var(--color-brand-primary)" style={{ margin: '0 auto 8px auto' }} />
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Drag & Drop PDF or Photo here
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Supports PDF, JPG, PNG up to 10MB
-                </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept=".pdf,.jpg,.jpeg,.png"
+                style={{ display: 'none' }}
+              />
+
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                style={{
+                  border: isDragging ? '2px dashed var(--color-brand-accent)' : '2px dashed var(--border-color-glow)',
+                  borderRadius: 14,
+                  padding: 24,
+                  textAlign: 'center',
+                  background: isDragging ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.05)',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease, border-color 0.2s ease'
+                }}
+              >
+                {selectedFile ? (
+                  <>
+                    <FileCheck size={32} color="var(--color-emerald)" style={{ margin: '0 auto 8px auto' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {selectedFile.name}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--color-emerald)', marginTop: 2 }}>
+                      File selected ({fileSizeFormatted})
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={32} color="var(--color-brand-primary)" style={{ margin: '0 auto 8px auto' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Drag & Drop PDF or Photo here (or click to browse)
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      Supports PDF, JPG, PNG up to 10MB
+                    </div>
+                  </>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
@@ -209,3 +314,4 @@ export default function DocumentVault({ pet, onAddDocument, onDeleteDocument }) 
     </div>
   );
 }
+

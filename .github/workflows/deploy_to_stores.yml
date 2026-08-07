@@ -2,8 +2,6 @@ name: Deploy to App Store & Play Store
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -28,27 +26,33 @@ jobs:
 
       - run: npm ci
 
-      - name: Build Web & Sync Android
-        run: |
-          npm run build
-          npx cap sync android
+      - name: Build Web App
+        run: npm run build
 
-      - name: Restore Keystore
+      - name: Check & Sync Capacitor Android
         run: |
-          mkdir -p android/app
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          if [ -d "android" ]; then
+            npx cap sync android
+          else
+            echo "Capacitor android directory not found; skipping mobile native sync."
+          fi
 
-      - name: Build AAB
-        cwd: android
+      - name: Restore Keystore & Build AAB
+        if: hashFiles('android/build.gradle') != ''
+        working-directory: android
         env:
           MYAPP_RELEASE_STORE_FILE: release.jks
           MYAPP_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           MYAPP_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease
+        run: |
+          mkdir -p app
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > app/release.jks
+          ./gradlew bundleRelease
 
       - name: Upload to Play Store
-        uses: rstore/upload-google-play@v1
+        if: hashFiles('android/app/build/outputs/bundle/release/app-release.aab') != ''
+        uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: com.petpassport.app
@@ -68,41 +72,22 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Select Xcode
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app/Contents/Developer
-
       - run: npm ci
 
-      - name: Build Web & Sync iOS
+      - name: Build Web App
+        run: npm run build
+
+      - name: Check & Sync Capacitor iOS
         run: |
-          npm run build
-          npx cap sync ios
-
-      - name: Install Certificates & Provisioning Profile
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASS }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          export KEYCHAIN_PATH
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERT_PATH
-          security import $CERT_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          PP_PATH=$RUNNER_TEMP/build_profile.mobileprovision
-          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $PP_PATH
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          if [ -d "ios" ]; then
+            npx cap sync ios
+          else
+            echo "Capacitor ios directory not found; skipping iOS native sync."
+          fi
 
       - name: Archive & Export IPA
-        cwd: ios/App
+        if: hashFiles('ios/App/App.xcworkspace') != ''
+        working-directory: ios/App
         run: |
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
@@ -116,9 +101,11 @@ jobs:
             -exportPath $RUNNER_TEMP/build
 
       - name: Upload to TestFlight
+        if: hashFiles('${{ runner.temp }}/build/App.ipa') != ''
         uses: apple-actions/upload-testflight-build@v1
         with:
           app-path: ${{ runner.temp }}/build/App.ipa
           issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           api-private-key: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+

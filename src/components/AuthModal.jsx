@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, LogIn, UserPlus, ShieldCheck, Share2, Mail, Lock, CheckCircle2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { syncService } from '../services/syncService';
@@ -10,6 +10,16 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
   const [shareCodeInput, setShareCodeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -58,40 +68,45 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
       onSharedPetImport(sharedPet);
       onClose();
     } catch (err) {
-      setError('Invalid or expired family share code.');
+      setError(err.message || 'Invalid or expired family share code.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', margin: 0 }}>
-              {activeMode === 'share' ? 'Import Shared Pet Passport' : activeMode === 'signup' ? 'Create Persistent Account' : 'Cloud Sync Sign In'}
+            <h3 id="auth-modal-title" style={{ fontSize: '1.3rem', color: 'var(--text-primary)', margin: 0 }}>
+              {activeMode === 'share' ? 'Import Shared Pet Passport' : activeMode === 'signup' ? 'Create Account' : 'Sign In'}
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-              {activeMode === 'share' ? 'Enter family access code from spouse or vet' : 'Persistent pet records synced across Web, iPhone & Android'}
+              {activeMode === 'share' ? 'Enter family access code from spouse or vet' : 'Access your pet travel records securely across devices'}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <button onClick={onClose} aria-label="Close authentication modal" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div style={{
-          display: 'flex',
-          background: 'var(--bg-surface-elevated)',
-          padding: 4,
-          borderRadius: 12,
-          marginBottom: 20,
-          border: '1px solid var(--border-color)'
-        }}>
+        <div 
+          role="tablist"
+          style={{
+            display: 'flex',
+            background: 'var(--bg-surface-elevated)',
+            padding: 4,
+            borderRadius: 12,
+            marginBottom: 20,
+            border: '1px solid var(--border-color)'
+          }}
+        >
           <button
+            role="tab"
+            aria-selected={activeMode === 'login'}
             onClick={() => { setActiveMode('login'); setError(''); }}
             style={{
               flex: 1,
@@ -108,6 +123,8 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
             Sign In
           </button>
           <button
+            role="tab"
+            aria-selected={activeMode === 'signup'}
             onClick={() => { setActiveMode('signup'); setError(''); }}
             style={{
               flex: 1,
@@ -124,6 +141,8 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
             Sign Up
           </button>
           <button
+            role="tab"
+            aria-selected={activeMode === 'share'}
             onClick={() => { setActiveMode('share'); setError(''); }}
             style={{
               flex: 1,
@@ -159,12 +178,13 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
         {activeMode === 'share' ? (
           <form onSubmit={handleRedeemShareCode} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                Enter 6-Digit Family Share Code
+              <label htmlFor="share-code-input" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                Enter Family Share Code
               </label>
               <input
+                id="share-code-input"
                 type="text"
-                placeholder="e.g. PASS-SHARE-981245"
+                placeholder="e.g. PASS-A1B2C3"
                 value={shareCodeInput}
                 onChange={e => setShareCodeInput(e.target.value.toUpperCase())}
                 required
@@ -206,7 +226,7 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'center',
+                  justifyContent: 'center',
                   gap: 8
                 }}
               >
@@ -228,7 +248,7 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'center',
+                  justifyContent: 'center',
                   gap: 8
                 }}
               >
@@ -250,10 +270,11 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
 
             <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                <label htmlFor="auth-email-input" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                   Email Address
                 </label>
                 <input
+                  id="auth-email-input"
                   type="email"
                   placeholder="name@example.com"
                   value={email}
@@ -271,10 +292,11 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
               </div>
 
               <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                <label htmlFor="auth-password-input" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                   Password
                 </label>
                 <input
+                  id="auth-password-input"
                   type="password"
                   placeholder="••••••••"
                   value={password}
@@ -301,3 +323,4 @@ export default function AuthModal({ onClose, onAuthSuccess, onSharedPetImport })
     </div>
   );
 }
+

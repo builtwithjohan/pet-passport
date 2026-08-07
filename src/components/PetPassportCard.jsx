@@ -112,7 +112,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
       {/* Top Banner Action */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
         flexWrap: 'wrap',
@@ -145,7 +145,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
           background: 'var(--color-brand-gradient)',
           padding: '16px 24px',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           color: '#fff'
         }}>
@@ -206,7 +206,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 marginTop: 6,
                 fontFamily: 'monospace',
                 fontWeight: 700,
@@ -358,7 +358,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
                 padding: 6,
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'center'
+                justifyContent: 'center'
               }}>
                 <QrCode size={48} color="#0F172A" />
               </div>

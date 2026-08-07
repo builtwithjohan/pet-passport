@@ -3,14 +3,48 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const TOKEN_KEY = 'pet_passport_session_token';
 
-function hashPassword(password) {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+function getInitialsAvatar(name) {
+  const initials = (name || 'Traveler').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#6366F1"/><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-size="38" font-family="system-ui, sans-serif" font-weight="bold">${initials}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+async function hashPassword(password, salt = 'pet_passport_salt_v1') {
+  if (!window.crypto?.subtle) {
+    // Fallback if SubtleCrypto is unavailable in non-secure contexts
+    return 'h_' + password.split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0);
   }
-  return 'h_' + Math.abs(hash).toString(36);
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(salt),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+  const exported = await crypto.subtle.exportKey('raw', key);
+  return Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateSecureToken() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export const authService = {
@@ -23,7 +57,7 @@ export const authService = {
             id: session.user.id,
             email: session.user.email,
             name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
-            avatarUrl: session.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`,
+            avatarUrl: session.user.user_metadata?.avatar_url || getInitialsAvatar(session.user.email.split('@')[0]),
             provider: session.user.app_metadata?.provider || 'supabase'
           };
         }
@@ -48,6 +82,10 @@ export const authService = {
   },
 
   async registerOrLoginEmail(email, password, isSignUp = false) {
+    if (!email || !password) {
+      throw new Error('Email and password are required.');
+    }
+
     if (isSupabaseConfigured) {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({ email, password });
@@ -56,7 +94,7 @@ export const authService = {
           id: data.user.id,
           email: data.user.email,
           name: email.split('@')[0],
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
+          avatarUrl: getInitialsAvatar(email.split('@')[0])
         };
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -65,61 +103,46 @@ export const authService = {
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata?.full_name || email.split('@')[0],
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
+          avatarUrl: getInitialsAvatar(email.split('@')[0])
         };
       }
     }
 
     const existingUser = await dbStore.getUserByEmail(email);
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
 
     if (isSignUp) {
       if (existingUser) {
-        // If user already exists on sign up, sign them in
-        const token = 'tok_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem(TOKEN_KEY, token);
-        await dbStore.saveSession(token, existingUser);
-        return existingUser;
+        throw new Error('An account already exists with this email. Please sign in instead.');
       }
 
+      const userName = email.split('@')[0];
       const newUser = {
-        id: 'usr_' + Math.random().toString(36).substring(2, 11),
+        id: 'usr_' + generateSecureToken(),
         email,
         passwordHash,
-        name: email.split('@')[0],
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        name: userName,
+        avatarUrl: getInitialsAvatar(userName),
         createdAt: new Date().toISOString()
       };
 
       await dbStore.saveUser(newUser);
 
-      const token = 'tok_' + Math.random().toString(36).substring(2, 15);
+      const token = generateSecureToken();
       localStorage.setItem(TOKEN_KEY, token);
       await dbStore.saveSession(token, newUser);
 
       return newUser;
     } else {
       if (!existingUser) {
-        // Auto-register user on first sign in if account doesn't exist yet
-        const newUser = {
-          id: 'usr_' + Math.random().toString(36).substring(2, 11),
-          email,
-          passwordHash,
-          name: email.split('@')[0],
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-          createdAt: new Date().toISOString()
-        };
-
-        await dbStore.saveUser(newUser);
-
-        const token = 'tok_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem(TOKEN_KEY, token);
-        await dbStore.saveSession(token, newUser);
-
-        return newUser;
+        throw new Error('No account found with this email. Please sign up first.');
       }
 
-      const token = 'tok_' + Math.random().toString(36).substring(2, 15);
+      if (existingUser.passwordHash && existingUser.passwordHash !== passwordHash) {
+        throw new Error('Invalid email or password. Please try again.');
+      }
+
+      const token = generateSecureToken();
       localStorage.setItem(TOKEN_KEY, token);
       await dbStore.saveSession(token, existingUser);
 
@@ -128,39 +151,18 @@ export const authService = {
   },
 
   async loginWithOAuthProvider(provider) {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider.toLowerCase(),
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) throw error;
-      return null;
+    if (!isSupabaseConfigured) {
+      throw new Error(`OAuth sign-in with ${provider} requires Supabase backend configuration. Please sign in with Email/Password.`);
     }
 
-    // Direct, robust OAuth sign-in fallback (popup-blocker resilient)
-    const email = `traveler.${provider}@petpassport.app`;
-    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-
-    let user = await dbStore.getUserByEmail(email);
-    if (!user) {
-      user = {
-        id: `usr_${provider}_${Math.random().toString(36).substring(2, 11)}`,
-        email,
-        name: `${providerName} Traveler`,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`,
-        provider,
-        createdAt: new Date().toISOString()
-      };
-      await dbStore.saveUser(user);
-    }
-
-    const token = `tok_${provider}_${Math.random().toString(36).substring(2, 15)}`;
-    localStorage.setItem(TOKEN_KEY, token);
-    await dbStore.saveSession(token, user);
-
-    return user;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provider.toLowerCase(),
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) throw error;
+    return null;
   },
 
   async logout() {
@@ -183,3 +185,4 @@ export const authService = {
     }
   }
 };
+

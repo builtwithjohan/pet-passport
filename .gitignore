@@ -33,3 +33,5 @@ pnpm-debug.log*
 *.sln
 *.sw?
 ARCHITECTURE_AND_PUBLISHING_GUIDE.md
+graphify-out
+BAD_DESIGNS.md

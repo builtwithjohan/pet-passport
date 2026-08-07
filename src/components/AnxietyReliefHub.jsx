@@ -29,7 +29,7 @@ export default function AnxietyReliefHub() {
             background: 'var(--color-brand-gradient)',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             color: '#fff'
           }}>
             <Heart size={26} />

@@ -114,7 +114,7 @@ export default function AirlineRulesCalculator({ pet }) {
               border: `1px solid ${selectedAirline.inCabinAllowed ? 'var(--color-emerald)' : 'var(--color-rose)'}`,
               display: 'flex',
               alignItems: 'center',
-              justify: 'space-between'
+              justifyContent: 'space-between'
             }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>In-Cabin Travel</span>
               <span className={`badge ${selectedAirline.inCabinAllowed ? 'badge-valid' : 'badge-danger'}`}>

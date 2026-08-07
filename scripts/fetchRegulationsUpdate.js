@@ -95,9 +95,11 @@ async function checkPortals() {
           name: source.name,
           country: source.country,
           url: source.url,
-          status: 'ONLINE',
+          status: 'REACHABLE',
           statusCode: res.status,
           verifiedKeywordsCount: foundTerms.length,
+          matchedKeywords: foundTerms,
+          contentLengthBytes: text.length,
           lastChecked: new Date().toISOString()
         });
         totalOk++;
@@ -107,9 +109,10 @@ async function checkPortals() {
           name: source.name,
           country: source.country,
           url: source.url,
-          status: 'WARNING_HTTP_' + res.status,
+          status: 'HTTP_' + res.status,
           statusCode: res.status,
           verifiedKeywordsCount: 0,
+          matchedKeywords: [],
           lastChecked: new Date().toISOString()
         });
         totalWarnings++;
@@ -121,7 +124,7 @@ async function checkPortals() {
         name: source.name,
         country: source.country,
         url: source.url,
-        status: 'FETCH_ERROR',
+        status: 'UNREACHABLE',
         errorDetails: err.message,
         lastChecked: new Date().toISOString()
       });
@@ -135,7 +138,7 @@ async function checkPortals() {
       totalMonitored: REGULATION_SOURCES.length,
       portalsActive: totalOk,
       portalsFlagged: totalWarnings,
-      status: totalWarnings === 0 ? 'ALL_PORTALS_COMPLIANT' : 'ATTENTION_NEEDED'
+      status: totalWarnings === 0 ? 'PORTALS_REACHABLE' : 'ATTENTION_NEEDED'
     },
     results: auditResults
   };
@@ -143,7 +146,7 @@ async function checkPortals() {
   const outputPath = path.join(__dirname, '../src/data/lastRegulationAudit.json');
   fs.writeFileSync(outputPath, JSON.stringify(auditReport, null, 2));
 
-  console.log(`Audit finished. Active: ${totalOk} | Flagged: ${totalWarnings}`);
+  console.log(`Portal check completed. Reachable: ${totalOk} | Issues: ${totalWarnings}`);
 }
 
 checkPortals();

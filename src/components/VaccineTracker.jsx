@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Syringe, Plus, Calendar, AlertCircle, CheckCircle2, ShieldAlert, Award, FileText } from 'lucide-react';
+import { getVaccineStatus } from '../utils/vaccineUtils';
 
 export default function VaccineTracker({ pet, onAddVaccine, onDeleteVaccine }) {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -17,19 +18,9 @@ export default function VaccineTracker({ pet, onAddVaccine, onDeleteVaccine }) {
     e.preventDefault();
     if (!formData.name || !formData.dateAdministered || !formData.dateExpires) return;
     
-    // Auto status calculation based on expiry date
-    const today = new Date();
-    const expiry = new Date(formData.dateExpires);
-    const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-
-    let status = 'valid';
-    if (diffDays < 0) status = 'expired';
-    else if (diffDays <= 30) status = 'warning';
-
     onAddVaccine(pet.id, {
-      id: 'v-' + Date.now(),
-      ...formData,
-      status
+      id: (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'v-' + Date.now()),
+      ...formData
     });
 
     setShowAddModal(false);
@@ -46,7 +37,7 @@ export default function VaccineTracker({ pet, onAddVaccine, onDeleteVaccine }) {
     <div style={{ padding: '24px 0' }}>
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
         flexWrap: 'wrap',
@@ -67,92 +58,100 @@ export default function VaccineTracker({ pet, onAddVaccine, onDeleteVaccine }) {
       </div>
 
       {/* Vaccine Records List */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-        {pet.vaccinations.map((vac) => {
-          const isWarning = vac.status === 'warning';
-          const isExpired = vac.status === 'expired';
+      {pet.vaccinations.length === 0 ? (
+        <div className="glass-panel" style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <Syringe size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+          <p style={{ margin: 0, fontWeight: 600 }}>No vaccination records added yet.</p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>Click "Add Vaccine Record" to record rabies immunizations or titre tests.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+          {pet.vaccinations.map((vac) => {
+            const { status, label, isExpired, isWarning } = getVaccineStatus(vac);
 
-          return (
-            <div 
-              key={vac.id} 
-              className="glass-panel"
-              style={{
-                padding: 20,
-                borderLeft: `4px solid ${
-                  isExpired ? 'var(--color-rose)' : isWarning ? 'var(--color-amber)' : 'var(--color-emerald)'
-                }`
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0 }}>{vac.name}</h3>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                    Batch / Serial: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vac.batch || 'N/A'}</span>
+            return (
+              <div 
+                key={vac.id} 
+                className="glass-panel"
+                style={{
+                  padding: 20,
+                  borderLeft: `4px solid ${
+                    isExpired ? 'var(--color-rose)' : isWarning ? 'var(--color-amber)' : 'var(--color-emerald)'
+                  }`
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0 }}>{vac.name}</h3>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      Batch / Serial: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{vac.batch || 'N/A'}</span>
+                    </div>
+                  </div>
+                  
+                  <span className={`badge badge-${status}`}>
+                    {status.toUpperCase()}
+                  </span>
+                </div>
+
+                <div style={{
+                  margin: '16px 0',
+                  padding: 12,
+                  background: 'var(--bg-surface-elevated)',
+                  borderRadius: 12,
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 10,
+                  fontSize: '0.82rem'
+                }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Administered</span>
+                    <strong style={{ color: 'var(--text-primary)' }}>{vac.dateAdministered}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Expires On</span>
+                    <strong style={{ color: isExpired ? 'var(--color-rose)' : isWarning ? 'var(--color-amber)' : 'var(--color-emerald)' }}>
+                      {vac.dateExpires}
+                    </strong>
                   </div>
                 </div>
-                
-                <span className={`badge badge-${vac.status}`}>
-                  {vac.status.toUpperCase()}
-                </span>
-              </div>
 
-              <div style={{
-                margin: '16px 0',
-                padding: 12,
-                background: 'var(--bg-surface-elevated)',
-                borderRadius: 12,
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 10,
-                fontSize: '0.82rem'
-              }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block' }}>Administered</span>
-                  <strong style={{ color: 'var(--text-primary)' }}>{vac.dateAdministered}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  <span>Vet: <strong>{vac.vet || 'Licensed Vet'}</strong></span>
+                  <button
+                    onClick={() => onDeleteVaccine(pet.id, vac.id)}
+                    aria-label={`Delete ${vac.name} vaccine record`}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--color-rose)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block' }}>Expires On</span>
-                  <strong style={{ color: isExpired ? 'var(--color-rose)' : isWarning ? 'var(--color-amber)' : 'var(--color-emerald)' }}>
-                    {vac.dateExpires}
-                  </strong>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                <span>Vet: <strong>{vac.vet || 'Licensed Vet'}</strong></span>
-                <button
-                  onClick={() => onDeleteVaccine(pet.id, vac.id)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--color-rose)',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem'
-                  }}
-                >
-                  Delete
-                </button>
+                {(isWarning || isExpired) && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: '8px 12px',
+                    background: isExpired ? 'rgba(244, 63, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                    borderRadius: 8,
+                    fontSize: '0.75rem',
+                    color: isExpired ? 'var(--color-rose)' : 'var(--color-amber)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <AlertCircle size={14} /> {label}
+                  </div>
+                )}
               </div>
-
-              {isWarning && (
-                <div style={{
-                  marginTop: 12,
-                  padding: '8px 12px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  borderRadius: 8,
-                  fontSize: '0.75rem',
-                  color: 'var(--color-amber)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}>
-                  <AlertCircle size={14} /> Expiring soon! Schedule booster before international departure.
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Vaccine Modal */}
       {showAddModal && (

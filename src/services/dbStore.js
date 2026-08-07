@@ -49,18 +49,26 @@ export const dbStore = {
   },
 
   // Sessions
-  async saveSession(token, user) {
+  async saveSession(token, user, expiresInDays = 30) {
     const db = await initDB();
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
     await db.put('sessions', {
       token,
       userId: user.id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      expiresAt
     });
   },
 
   async getSession(token) {
     const db = await initDB();
-    return db.get('sessions', token);
+    const session = await db.get('sessions', token);
+    if (!session) return null;
+    if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+      await db.delete('sessions', token);
+      return null;
+    }
+    return session;
   },
 
   async deleteSession(token) {

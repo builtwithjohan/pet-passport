@@ -13,12 +13,21 @@ import AddPetModal from './components/AddPetModal';
 import AuthModal from './components/AuthModal';
 import { authService } from './services/authService';
 import { syncService } from './services/syncService';
+import { computeDestinationReadinessScore } from './utils/vaccineUtils';
 import { Smartphone, Monitor, ShieldCheck, Heart } from 'lucide-react';
 
 export default function App() {
   const [pets, setPets] = useState(() => {
-    const saved = localStorage.getItem('pet_passport_pets');
-    return saved ? JSON.parse(saved) : SAMPLE_PETS;
+    try {
+      const saved = localStorage.getItem('pet_passport_pets');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (err) {
+      console.warn('Failed to parse local pets storage:', err);
+    }
+    return SAMPLE_PETS;
   });
 
   const [activePetId, setActivePetId] = useState(() => pets[0]?.id || 'pet-1');
@@ -46,9 +55,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('pet_passport_pets', JSON.stringify(pets));
+    try {
+      localStorage.setItem('pet_passport_pets', JSON.stringify(pets));
+    } catch (err) {
+      console.warn('Failed to persist pets to localStorage:', err);
+    }
+
     if (currentUser) {
-      syncService.syncToCloud(currentUser, pets);
+      // Only sync non-sample pets to user account
+      const userPetsToSync = pets.filter(p => !p.isSample);
+      if (userPetsToSync.length > 0) {
+        syncService.syncToCloud(currentUser, userPetsToSync);
+      }
     }
   }, [pets, currentUser]);
 
@@ -65,41 +83,43 @@ export default function App() {
       setPets(userPets);
       setActivePetId(userPets[0].id);
     } else {
-      // Migrate current local pets to newly logged-in user account
-      const migrated = pets.map(p => ({ ...p, ownerId: user.id }));
-      setPets(migrated);
-      await syncService.syncToCloud(user, migrated);
+      // Only migrate real user-created pets (exclude demo sample pets)
+      const userCreatedPets = pets.filter(p => !p.isSample).map(p => ({ ...p, ownerId: user.id }));
+      if (userCreatedPets.length > 0) {
+        setPets(userCreatedPets);
+        await syncService.syncToCloud(user, userCreatedPets);
+      }
     }
   };
 
   const handleAddPet = (newPet) => {
-    setPets([...pets, newPet]);
+    setPets(prev => [...prev, newPet]);
     setActivePetId(newPet.id);
   };
 
   const handleSharedPetImport = (sharedPet) => {
-    setPets([sharedPet, ...pets]);
+    setPets(prev => [sharedPet, ...prev]);
     setActivePetId(sharedPet.id);
   };
 
   const handleAddVaccine = (petId, newVaccine) => {
-    setPets(pets.map(p => p.id === petId ? { ...p, vaccinations: [newVaccine, ...p.vaccinations] } : p));
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, vaccinations: [newVaccine, ...(p.vaccinations || [])] } : p));
   };
 
   const handleDeleteVaccine = (petId, vaccineId) => {
-    setPets(pets.map(p => p.id === petId ? { ...p, vaccinations: p.vaccinations.filter(v => v.id !== vaccineId) } : p));
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, vaccinations: (p.vaccinations || []).filter(v => v.id !== vaccineId) } : p));
   };
 
   const handleToggleChecklist = (petId, updatedCompletedIds) => {
-    setPets(pets.map(p => p.id === petId ? { ...p, completedChecklistIds: updatedCompletedIds } : p));
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, completedChecklistIds: updatedCompletedIds } : p));
   };
 
   const handleAddDocument = (petId, newDoc) => {
-    setPets(pets.map(p => p.id === petId ? { ...p, documents: [newDoc, ...p.documents] } : p));
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, documents: [newDoc, ...(p.documents || [])] } : p));
   };
 
   const handleDeleteDocument = (petId, docId) => {
-    setPets(pets.map(p => p.id === petId ? { ...p, documents: p.documents.filter(d => d.id !== docId) } : p));
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, documents: (p.documents || []).filter(d => d.id !== docId) } : p));
   };
 
   const handleLogout = async () => {
@@ -107,13 +127,8 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const totalChecklistItems = DEFAULT_CHECKLIST.reduce((acc, g) => acc + g.items.length, 0);
-  const completedCount = activePet?.completedChecklistIds?.length || 0;
-  const hasValidRabies = activePet?.vaccinations?.some(v => v.name.toLowerCase().includes('rabies') && v.status === 'valid');
-
-  let readinessScore = Math.round((completedCount / totalChecklistItems) * 80);
-  if (hasValidRabies) readinessScore += 20;
-  if (readinessScore > 100) readinessScore = 100;
+  // Compute dynamic readiness score based on destination country rules
+  const readinessScore = activePet ? computeDestinationReadinessScore(activePet, activePet.destinationCountry) : 0;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -172,7 +187,7 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Body View (Desktop vs Mobile App Preview) */}
+      {/* Main Body View (Desktop vs Responsive Compact View) */}
       <main style={{ flex: 1 }}>
         {viewMode === 'mobile' ? (
           <div className="device-frame-container">
@@ -189,7 +204,7 @@ export default function App() {
                   marginBottom: 16,
                   textAlign: 'center'
                 }}>
-                  📱 iPhone / Android Mobile App Simulator Mode
+                  📱 Mobile Viewport Preview Mode
                 </div>
                 {renderTabContent()}
               </div>
@@ -213,12 +228,11 @@ export default function App() {
       }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <strong>Pet Passport</strong> • Official Global Pet Travel, Vaccination Records & Airline Compliance System
+            <strong>Pet Passport</strong> • Comprehensive Pet Travel Checklist & Vaccination Tracker
           </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <span>ISO 11784/11785 Verified</span>
-            <span>CDC 2024 Compliant</span>
-            <span>EU Annex IV Standard</span>
+          <div style={{ display: 'flex', gap: 16, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <span>Based on published CDC, EU & DEFRA public guidance</span>
+            <span>Always verify with official government sources</span>
           </div>
         </div>
       </footer>
@@ -242,3 +256,4 @@ export default function App() {
     </div>
   );
 }
+

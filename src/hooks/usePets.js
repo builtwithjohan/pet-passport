@@ -42,8 +42,11 @@ export function usePets() {
           setCurrentUser(user);
           const userPets = await syncService.getUserPets(user.id);
           if (userPets && userPets.length > 0) {
-            setPets(userPets);
-            setActivePetId(userPets[0].id);
+            // Display only user account pets when logged in
+            const nonSamplePets = userPets.filter(p => !p.isSample);
+            const activeUserPets = nonSamplePets.length > 0 ? nonSamplePets : userPets;
+            setPets(activeUserPets);
+            setActivePetId(activeUserPets[0].id);
           }
         }
       } catch (err) {
@@ -78,15 +81,22 @@ export function usePets() {
     try {
       const userPets = await syncService.getUserPets(user.id);
       if (userPets && userPets.length > 0) {
-        setPets(userPets);
-        setActivePetId(userPets[0].id);
-        addToast(`Welcome back, ${user.name || user.email}! Loaded ${userPets.length} pet profile(s).`, 'success');
+        const nonSamplePets = userPets.filter(p => !p.isSample);
+        const activeUserPets = nonSamplePets.length > 0 ? nonSamplePets : userPets;
+        setPets(activeUserPets);
+        setActivePetId(activeUserPets[0].id);
+        addToast(`Welcome back, ${user.name || user.email}! Loaded ${activeUserPets.length} pet profile(s).`, 'success');
       } else {
         const userCreatedPets = pets.filter(p => !p.isSample).map(p => ({ ...p, ownerId: user.id }));
         if (userCreatedPets.length > 0) {
           setPets(userCreatedPets);
+          setActivePetId(userCreatedPets[0].id);
           await syncService.syncToCloud(user, userCreatedPets);
           addToast('Local pet profiles associated with your account.', 'success');
+        } else {
+          setPets([]);
+          setActivePetId(null);
+          addToast(`Welcome, ${user.name || user.email}! Create your first pet passport below.`, 'info');
         }
       }
     } catch (err) {
@@ -95,10 +105,15 @@ export function usePets() {
   }, [pets, addToast]);
 
   const addPet = useCallback((newPet) => {
-    setPets(prev => [...prev, newPet]);
-    setActivePetId(newPet.id);
-    addToast(`Added ${newPet.name}'s passport profile`, 'success');
-  }, [addToast]);
+    const petToSave = currentUser ? { ...newPet, ownerId: currentUser.id } : newPet;
+    setPets(prev => {
+      // If user was logged in and had no pets, replace empty array cleanly
+      const filtered = prev.filter(p => p.id !== 'pet-1' && p.id !== 'pet-2');
+      return [...filtered, petToSave];
+    });
+    setActivePetId(petToSave.id);
+    addToast(`Added ${petToSave.name}'s passport profile`, 'success');
+  }, [currentUser, addToast]);
 
   const updatePet = useCallback((updatedPet) => {
     setPets(prev => prev.map(p => p.id === updatedPet.id ? updatedPet : p));
@@ -138,7 +153,14 @@ export function usePets() {
   const logout = useCallback(async () => {
     await authService.logout();
     setCurrentUser(null);
-    addToast('Signed out of account', 'info');
+    setPets(SAMPLE_PETS);
+    setActivePetId(SAMPLE_PETS[0].id);
+    try {
+      localStorage.setItem('pet_passport_pets', JSON.stringify(SAMPLE_PETS));
+    } catch (e) {
+      // ignore
+    }
+    addToast('Signed out of account. Private records cleared.', 'info');
   }, [addToast]);
 
   return {

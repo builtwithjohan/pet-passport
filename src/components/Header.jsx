@@ -80,7 +80,7 @@ export default function Header({
               border: '1px solid var(--border-color)'
             }}>
               <span style={{ fontSize: '1.1rem' }}>
-                {activePet.species.toLowerCase().includes('cat') ? '🐱' : '🐶'}
+                {activePet?.species?.toLowerCase()?.includes('cat') ? '🐱' : '🐶'}
               </span>
               <select
                 value={activePetId}

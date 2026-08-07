@@ -107,6 +107,7 @@ export default function PetPassportCard({ pet, onTabChange }) {
   };
 
   const rabiesVaccine = pet.vaccinations.find(v => v.name.toLowerCase().includes('rabies'));
+  const rabiesStatus = rabiesVaccine ? getVaccineStatus(rabiesVaccine) : null;
   const titreTest = pet.vaccinations.find(v => v.name.toLowerCase().includes('titre') || v.name.toLowerCase().includes('favn'));
 
   return (
@@ -315,9 +316,9 @@ export default function PetPassportCard({ pet, onTabChange }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Rabies Vaccination:</span>
-                  {rabiesVaccine ? (
-                    <span className={`badge badge-${rabiesVaccine.status}`}>
-                      {rabiesVaccine.status.toUpperCase()} ({rabiesVaccine.dateExpires})
+                  {rabiesVaccine && rabiesStatus ? (
+                    <span className={`badge badge-${rabiesStatus.status}`}>
+                      {rabiesStatus.status.toUpperCase()} ({rabiesVaccine.dateExpires || 'N/A'})
                     </span>
                   ) : (
                     <span className="badge badge-danger">MISSING</span>

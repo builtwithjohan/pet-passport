@@ -1,5 +1,5 @@
 {
-  "auditTimestamp": "2026-08-06T18:50:28.262Z",
+  "auditTimestamp": "2026-08-30T03:58:08.085Z",
   "auditSummary": {
     "totalMonitored": 8,
     "portalsActive": 5,
@@ -10,81 +10,105 @@
     {
       "id": "CDC_USA",
       "name": "US CDC Dog Import Rules",
-      "country": "USA 🇺🇸",
+      "country": "USA",
       "url": "https://www.cdc.gov/importation/bringing-an-animal-into-the-united-states/dogs/index.html",
-      "status": "WARNING_HTTP_404",
+      "status": "HTTP_404",
       "statusCode": 404,
       "verifiedKeywordsCount": 0,
-      "lastChecked": "2026-08-06T18:50:13.860Z"
+      "matchedKeywords": [],
+      "lastChecked": "2026-08-30T03:57:57.431Z"
     },
     {
       "id": "EU_PETS",
       "name": "EU Food Safety Pet Movement",
-      "country": "EU 🇪🇺",
+      "country": "EU",
       "url": "https://ec.europa.eu/food/animals/pet-movement_en",
-      "status": "ONLINE",
+      "status": "REACHABLE",
       "statusCode": 200,
       "verifiedKeywordsCount": 0,
-      "lastChecked": "2026-08-06T18:50:16.067Z"
+      "matchedKeywords": [],
+      "contentLengthBytes": 104329,
+      "lastChecked": "2026-08-30T03:57:58.864Z"
     },
     {
       "id": "UK_DEFRA",
       "name": "UK GOV Pet Travel Rules",
-      "country": "UK 🇬🇧",
+      "country": "UK",
       "url": "https://www.gov.uk/bring-pet-to-great-britain",
-      "status": "ONLINE",
+      "status": "REACHABLE",
       "statusCode": 200,
       "verifiedKeywordsCount": 3,
-      "lastChecked": "2026-08-06T18:50:16.119Z"
+      "matchedKeywords": [
+        "Great Britain Pet Health Certificate",
+        "Tapeworm",
+        "Rabies"
+      ],
+      "contentLengthBytes": 151289,
+      "lastChecked": "2026-08-30T03:57:59.034Z"
     },
     {
       "id": "INDIA_AQCS",
       "name": "India AQCS Animal Quarantine",
-      "country": "India 🇮🇳",
+      "country": "India",
       "url": "https://aqcsindia.gov.in",
-      "status": "ONLINE",
+      "status": "REACHABLE",
       "statusCode": 200,
       "verifiedKeywordsCount": 0,
-      "lastChecked": "2026-08-06T18:50:16.197Z"
+      "matchedKeywords": [],
+      "contentLengthBytes": 30495,
+      "lastChecked": "2026-08-30T03:58:00.975Z"
     },
     {
       "id": "SINGAPORE_AVS",
       "name": "Singapore AVS NParks",
-      "country": "Singapore 🇸🇬",
+      "country": "Singapore",
       "url": "https://www.nparks.gov.sg/avs/pets/bringing-animals-into-singapore-and-exporting",
-      "status": "WARNING_HTTP_404",
+      "status": "HTTP_404",
       "statusCode": 404,
       "verifiedKeywordsCount": 0,
-      "lastChecked": "2026-08-06T18:50:16.706Z"
+      "matchedKeywords": [],
+      "lastChecked": "2026-08-30T03:58:02.195Z"
     },
     {
       "id": "JAPAN_MAFF",
       "name": "Japan MAFF Animal Quarantine Service",
-      "country": "Japan 🇯🇵",
+      "country": "Japan",
       "url": "https://www.maff.go.jp/aqs/english/animal/dog/index.html",
-      "status": "ONLINE",
+      "status": "REACHABLE",
       "statusCode": 200,
       "verifiedKeywordsCount": 3,
-      "lastChecked": "2026-08-06T18:50:17.320Z"
+      "matchedKeywords": [
+        "180 days",
+        "Form A",
+        "AQS"
+      ],
+      "contentLengthBytes": 22578,
+      "lastChecked": "2026-08-30T03:58:02.867Z"
     },
     {
       "id": "AUSTRALIA_DAFF",
       "name": "Australia DAFF Pet Import",
-      "country": "Australia 🇦🇺",
+      "country": "Australia",
       "url": "https://www.agriculture.gov.au/biosecurity-trade/cats-dogs",
-      "status": "FETCH_ERROR",
-      "errorDetails": "This operation was aborted",
-      "lastChecked": "2026-08-06T18:50:27.325Z"
+      "status": "REACHABLE",
+      "statusCode": 200,
+      "verifiedKeywordsCount": 1,
+      "matchedKeywords": [
+        "Import Permit"
+      ],
+      "contentLengthBytes": 59667,
+      "lastChecked": "2026-08-30T03:58:04.031Z"
     },
     {
       "id": "NZ_MPI",
       "name": "New Zealand MPI Biosecurity",
-      "country": "New Zealand 🇳🇿",
+      "country": "New Zealand",
       "url": "https://www.mpi.govt.nz/import/border-clearance/pets/",
-      "status": "ONLINE",
-      "statusCode": 200,
+      "status": "HTTP_404",
+      "statusCode": 404,
       "verifiedKeywordsCount": 0,
-      "lastChecked": "2026-08-06T18:50:28.262Z"
+      "matchedKeywords": [],
+      "lastChecked": "2026-08-30T03:58:08.085Z"
     }
   ]
 }
